@@ -9,7 +9,7 @@ JSON_PATH = "detik_sport_articles_combined.json"
 
 st.set_page_config(page_title="Detik Sport Search", page_icon="🏃", layout="wide")
 st.title("🏃 Detik Sport Search")
-st.caption("Pencarian artikel menggunakan Pyserini (BM25) + stemming Sastrawi")
+st.caption("Pencarian artikel menggunakan Pyserini (BM25) + stemming Sastrawi by Kelompok 7")
 
 @st.cache_resource(show_spinner=False)
 def load_resources(index_path: str, json_path: str):
@@ -40,9 +40,12 @@ except Exception as e:
     st.stop()
 
 with st.sidebar:
-    st.header("Opsi Pencarian")
+    st.header("Opsi pencarian yang ingin ditampilkan")
     use_stemming = st.checkbox("Gunakan stemming (Sastrawi)", value=True)
-    top_k = st.slider("Jumlah hasil (k)", min_value=5, max_value=50, value=10, step=5)
+    top_k = st.slider("Slide untuk jumlah hasil (k) yang ditampilkan:", min_value=5, max_value=50, value=10, step=5)
+    st.header("Kelompok 7")
+    st.text("- Daffa Harikhsan\n(23/513044/PA/21918) \n- Rayhan Firdaus Ardian \n(23/519095/PA/22279) \n- Zaky Alraiz Kadarisman \n(23/516033/PA/22047) \n- Rocky Arthama Putra \n(23/520891/PA/22395)")
+    
 
 query = st.text_input("Masukkan kata kunci", value="", placeholder="Contoh: Onana, persib, liga 1, timnas...")
 
