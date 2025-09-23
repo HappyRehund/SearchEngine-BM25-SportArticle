@@ -14,11 +14,10 @@ def preprocess_data_for_pyserini(input_file, output_file):
     with open(input_file, 'r', encoding='utf-8') as f:
         articles = json.load(f)
 
-    # Kata atau frasa yang ingin dihapus dari konten
     unwanted_phrases = [
         "SCROLL TO CONTINUE WITH CONTENT",
         "ADVERTISEMENT",
-        # Anda bisa tambahkan pola lain di sini jika ditemukan
+        # Klo mau ngehapus frasa ngga penting disini
     ]
 
     print(f"Memproses {len(articles)} artikel dan menyimpannya ke {output_file}...")
