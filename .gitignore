@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+catalog-v001.xml
+
+twitter_full_v2.ttl
+
+coba.py

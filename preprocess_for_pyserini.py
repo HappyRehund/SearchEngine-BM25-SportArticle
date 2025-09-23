@@ -1,6 +1,8 @@
 import json
 import re
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
+
 
 def preprocess_data_for_pyserini(input_file, output_file):
     """
@@ -9,6 +11,8 @@ def preprocess_data_for_pyserini(input_file, output_file):
     """
     factory = StemmerFactory()
     stemmer = factory.create_stemmer()
+    stop_factory = StopWordRemoverFactory()
+    stop_remover = stop_factory.create_stop_word_remover()
     
     print(f"Membaca data dari {input_file}...")
     with open(input_file, 'r', encoding='utf-8') as f:
@@ -38,7 +42,8 @@ def preprocess_data_for_pyserini(input_file, output_file):
             combined_content = f"{title}. {content.strip()}"
 
             print(f"Stemming artikel {i+1}/{len(articles)}: {title[:30]}")
-            stemmed_content = stemmer.stem(combined_content)
+            no_stop = stop_remover.remove(combined_content)
+            stemmed_content = stemmer.stem(no_stop)
             
             # Buat format JSONL yang dibutuhkan Pyserini
             # "id" harus unik, kita bisa gunakan URL

@@ -11,33 +11,32 @@ def clean_html(raw_html):
 
 def scrape_detik_sport():
     """Main scraping function"""
-    # File penyimpanan
     OUTPUT_FILE = "detik_sport_articles_combined.json"
 
-    # Load data lama kalau ada
+    # Muat data lama (jika ada) dan siapkan set URL untuk deduplikasi lintas-run
+    all_articles = []
+    existing_urls = set()
     if os.path.exists(OUTPUT_FILE):
         with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
             all_articles = json.load(f)
+        existing_urls = {a.get("url") for a in all_articles if a.get("url")}
         print(f"Loaded {len(all_articles)} existing articles from {OUTPUT_FILE}")
     else:
-        all_articles = []
+        print("Starting with an empty list for new articles.")
 
-    # Kategori utama & subkategori
+    # Kategori (mengadopsi daftar dari potongan kode Anda)
     categories = [
         "https://sport.detik.com/sepakbola",
-        "https://sport.detik.com/sport-lain",
+        "https://sport.detik.com/sepakbola/liga-spanyol",
+        "https://sport.detik.com/sepakbola/bola-dunia",
         "https://sport.detik.com/raket",
         "https://sport.detik.com/moto-gp",
         "https://sport.detik.com/f1",
         "https://sport.detik.com/basket",
-        "https://sport.detik.com/sepakbola/liga-inggris",
-        "https://sport.detik.com/sepakbola/liga-italia",
-        "https://sport.detik.com/sepakbola/liga-spanyol",
-        "https://sport.detik.com/sepakbola/liga-jerman",
-        "https://sport.detik.com/sepakbola/liga-indonesia",
-        "https://sport.detik.com/sepakbola/uefa",
-        "https://sport.detik.com/sepakbola/bola-dunia"
+        "https://sport.detik.com/sport-lain"
     ]
+
+    new_articles_added_count = 0
 
     # Scraping per kategori
     for category_url in categories:
@@ -55,8 +54,8 @@ def scrape_detik_sport():
         # Cari semua link artikel di halaman kategori
         potential_links = []
         for selector in [
-            "article a.media__link",
-            "article a",
+            "article a.media__link",          # selector utama
+            "article a",                      # fallback
             ".list-content__item a.media__link",
             ".list-content__item a"
         ]:
@@ -64,7 +63,7 @@ def scrape_detik_sport():
             if links:
                 potential_links.extend([a["href"] for a in links if a.get("href")])
 
-        # Buang duplikat & filter hanya link artikel detik sport
+        # Buang duplikat internal & filter hanya link artikel detik sport
         article_links = list(set([
             link for link in potential_links
             if link.startswith("https://sport.detik.com")
@@ -74,10 +73,14 @@ def scrape_detik_sport():
             print(f"No potential article links found on {category_url} with the current selectors.")
             continue
 
-        print(f"Found {len(article_links)} article links on {category_url}")
+        print(f"Found {len(article_links)} potential article links on {category_url}")
 
         # Scraping tiap artikel
         for article_url in article_links:
+            # Skip jika sudah ada (baik dari file lama maupun sesi ini)
+            if article_url in existing_urls:
+                continue
+
             try:
                 article_response = requests.get(article_url, timeout=10)
                 article_response.raise_for_status()
@@ -111,7 +114,7 @@ def scrape_detik_sport():
                 content_div = article_soup.select_one(".detail__body, .detail__content, .article__body")
             content = clean_html(str(content_div)) if content_div else "N/A"
 
-            # Simpan hasil artikel
+            # Simpan hasil artikel baru
             article_data = {
                 "url": article_url,
                 "title": title,
@@ -122,15 +125,19 @@ def scrape_detik_sport():
             }
 
             all_articles.append(article_data)
-            print(f"Scraped: {title}")
+            existing_urls.add(article_url)
+            new_articles_added_count += 1
+            print(f"Scraped new article: {title}")
 
-            time.sleep(1)
+            time.sleep(1)  # hindari terlalu agresif
 
-    # Simpan ke file JSON
+    # Simpan gabungan artikel lama + baru
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(all_articles, f, ensure_ascii=False, indent=2)
 
-    print(f"\nScraping complete! Data saved to {OUTPUT_FILE}. Total articles scraped: {len(all_articles)}")
+    print(f"\nScraping complete! Data saved to {OUTPUT_FILE}.")
+    print(f"New articles added in this run: {new_articles_added_count}")
+    print(f"Total articles in file: {len(all_articles)}")
     return all_articles
 
 def main():

@@ -3,6 +3,7 @@ import json
 import streamlit as st
 from pyserini.search.lucene import LuceneSearcher
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 
 INDEX_PATH = "indexes/detik_sport"
 JSON_PATH = "detik_sport_articles_combined.json"
@@ -28,26 +29,27 @@ def load_resources(index_path: str, json_path: str):
 
     factory = StemmerFactory()
     stemmer = factory.create_stemmer()
-
-    return searcher, articles_data, stemmer
+    stop_remover = StopWordRemoverFactory().create_stop_word_remover()
+    
+    return searcher, articles_data, stemmer, stop_remover
 
 try:
     with st.spinner("Memuat indeks dan data artikel..."):
-        searcher, articles_data, stemmer = load_resources(INDEX_PATH, JSON_PATH)
+        searcher, articles_data, stemmer, stop_remover = load_resources(INDEX_PATH, JSON_PATH)
     st.success(f"Indeks & data siap. Total artikel: {len(articles_data)}")
 except Exception as e:
     st.error(f"Gagal memuat resource: {e}")
     st.stop()
 
 with st.sidebar:
-    st.header("Opsi pencarian yang ingin ditampilkan")
-    use_stemming = st.checkbox("Gunakan stemming (Sastrawi)", value=True)
-    top_k = st.slider("Slide untuk jumlah hasil (k) yang ditampilkan:", min_value=5, max_value=50, value=10, step=5)
+    st.header("Opsi pencarian")
+    st.caption("Pengolahan query: Stopword removal + Stemming (Sastrawi)")
+    top_k = st.slider("Jumlah hasil (k) yang ditampilkan:", min_value=5, max_value=50, value=10, step=5)
     st.header("Kelompok 7")
     st.text("- Daffa Harikhsan\n(23/513044/PA/21918) \n- Rayhan Firdaus Ardian \n(23/519095/PA/22279) \n- Zaky Alraiz Kadarisman \n(23/516033/PA/22047) \n- Rocky Arthama Putra \n(23/520891/PA/22395)")
-    
 
-query = st.text_input("Masukkan kata kunci", value="", placeholder="Contoh: Onana, persib, liga 1, timnas...")
+
+query = st.text_input("Masukkan kata kunci", value="", placeholder="Contoh: Onana, MotoGP, liga spanyol, barcelona...")
 
 col1, col2 = st.columns([1, 3])
 with col1:
@@ -64,16 +66,20 @@ def shorten(text: str, max_len: int = 400):
     return text if len(text) <= max_len else text[: max_len - 1].rstrip() + "…"
 
 if search_btn:
-    if not query.strip():
+    raw_query = query.strip()
+    if not raw_query:
         st.warning("Silakan masukkan query terlebih dahulu.")
     else:
-        processed_query = stemmer.stem(query) if use_stemming else query
-        with st.spinner("Mencari..."):
-            hits = searcher.search(processed_query, k=top_k)
+        # Sesuai main-search.ipynb: stopword removal -> stemming
+        no_stop_query = stop_remover.remove(raw_query)
+        stemmed_query = stemmer.stem(no_stop_query)
 
-        st.write(f"Query: “{query}”")
-        if use_stemming:
-            st.caption(f"Setelah stemming: “{processed_query}”")
+        with st.spinner("Mencari..."):
+            hits = searcher.search(stemmed_query, k=top_k)
+
+        st.write(f'Query: "{raw_query}"')
+        st.caption(f'Tanpa stopword: "{no_stop_query}"')
+        st.caption(f'Setelah stemming: "{stemmed_query}"')
         st.subheader(f"Hasil: {len(hits)} dokumen")
 
         if not hits:
