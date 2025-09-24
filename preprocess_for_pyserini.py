@@ -24,6 +24,10 @@ def preprocess_data_for_pyserini(input_file, output_file):
         # Klo mau ngehapus frasa ngga penting disini
     ]
 
+    domain_stopwords = [
+        'baca','juga', 'jakarta', 'wib', 'vs', 'fc', 'di', 'pada', 'dalam', 'dan', 'itu',
+        'ini', 'skor', 'foto', 'video', 'krs', 'yna', 'aff', 'pur', 'mrp', 'cas', 'adp', 'rin', 'nds', 'mcy'
+    ]
     print(f"Memproses {len(articles)} artikel dan menyimpannya ke {output_file}...")
     with open(output_file, 'w', encoding='utf-8') as f_out:
         for i, article in enumerate(articles):
@@ -41,8 +45,19 @@ def preprocess_data_for_pyserini(input_file, output_file):
 
             combined_content = f"{title}. {content.strip()}"
 
+            #1. Case folding
+            processed_content = combined_content.lower()
+
+            #2. menghapus tanda baca dan angka
+            processed_content = re.sub(r'[^a-z\s]', ' ', processed_content)
+
+            #3. menghapus domain spesific stopword
+            words = processed_content.split()
+            words = [word for word in words if word not in domain_stopwords]
+            processed_content = ' '.join(words)
+
             print(f"Stemming artikel {i+1}/{len(articles)}: {title[:30]}")
-            no_stop = stop_remover.remove(combined_content)
+            no_stop = stop_remover.remove(processed_content)
             stemmed_content = stemmer.stem(no_stop)
             
             # Buat format JSONL yang dibutuhkan Pyserini
